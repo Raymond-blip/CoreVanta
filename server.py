@@ -5,7 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
@@ -183,7 +183,7 @@ class CoreVantaHandler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    port = 8080
-    server = HTTPServer(("", port), CoreVantaHandler)
-    print(f"CoreVanta server running at http://127.0.0.1:{port}")
+    port = int(os.environ.get("PORT", 8080))
+    server = ThreadingHTTPServer(("", port), CoreVantaHandler)
+    print(f"CoreVanta server running on port {port}")
     server.serve_forever()

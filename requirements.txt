@@ -1,0 +1,4 @@
+# CoreVanta has no third-party dependencies: the mail server uses only the
+# Python standard library (http.server, smtplib, email).
+# This file exists so Render's default Python build command
+# ("pip install -r requirements.txt") succeeds instead of failing.
