@@ -1,19 +1,19 @@
-import smtplib
+import base64
+import json
 import os
 import re
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs
+from urllib.request import Request, urlopen
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
-SMTP_HOST      = "smtp.gmail.com"
-SMTP_PORT      = 587
-SENDER_EMAIL   = "applicationwfhr@gmail.com"
-SENDER_PASS    = os.environ.get("GMAIL_APP_PASSWORD", "")   # set via environment variable
-RECEIVER_EMAIL = "applicationwfhr@gmail.com"
+# Mail goes out over Resend's HTTPS API instead of SMTP, because Render's free
+# web services block outbound traffic on the SMTP ports 25, 465 and 587.
+RESEND_ENDPOINT = "https://api.resend.com/emails"
+RESEND_API_KEY  = os.environ.get("RESEND_API_KEY", "")   # set via environment variable
+SENDER_NAME     = "CoreVanta"
+SENDER_EMAIL    = "onboarding@resend.dev"                # swap for an address on your verified domain
+RECEIVER_EMAIL  = "applicationwfhr@gmail.com"
 # ───────────────────────────────────────────────────────────────────────────────
 
 
@@ -54,11 +54,39 @@ def parse_multipart(data, boundary):
     return fields, files
 
 
+def send_via_resend(subject, html_body, reply_to=None, attachment=None):
+    """POST an email to Resend. Raises on failure so callers can report it."""
+    payload = {
+        "from":    f"{SENDER_NAME} <{SENDER_EMAIL}>",
+        "to":      [RECEIVER_EMAIL],
+        "subject": subject,
+        "html":    html_body,
+    }
+    if reply_to:
+        payload["reply_to"] = reply_to
+    if attachment:
+        filename, data = attachment
+        payload["attachments"] = [{
+            "filename": filename,
+            "content":  base64.b64encode(data).decode(),
+        }]
+
+    request = Request(
+        RESEND_ENDPOINT,
+        data=json.dumps(payload).encode(),
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type":  "application/json",
+            "User-Agent":    "CoreVanta/1.0",   # Cloudflare rejects urllib's default UA with error 1010
+        },
+        method="POST",
+    )
+    with urlopen(request, timeout=30) as response:
+        return response.status
+
+
 def send_email(fields, resume_data=None, resume_name=None):
-    msg = MIMEMultipart()
-    msg["From"]    = SENDER_EMAIL
-    msg["To"]      = RECEIVER_EMAIL
-    msg["Subject"] = f"New Job Application: {fields.get('position','N/A')} – {fields.get('full_name','N/A')}"
+    subject = f"New Job Application: {fields.get('position','N/A')} – {fields.get('full_name','N/A')}"
 
     body = f"""
 <h2 style="color:#06A3DA;">New Job Application — CoreVanta</h2>
@@ -72,27 +100,15 @@ def send_email(fields, resume_data=None, resume_name=None):
   <tr><td style="padding:8px;font-weight:bold;vertical-align:top;">Cover Letter</td><td style="padding:8px;">{fields.get('cover_letter','').replace(chr(10),'<br>')}</td></tr>
 </table>
 """
-    msg.attach(MIMEText(body, "html"))
-
-    if resume_data and resume_name:
-        part = MIMEBase("application", "octet-stream")
-        part.set_payload(resume_data)
-        encoders.encode_base64(part)
-        part.add_header("Content-Disposition", f'attachment; filename="{resume_name}"')
-        msg.attach(part)
-
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.starttls()
-        server.login(SENDER_EMAIL, SENDER_PASS.replace(" ", ""))
-        server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
+    send_via_resend(
+        subject,
+        body,
+        attachment=(resume_name, resume_data) if resume_data and resume_name else None,
+    )
 
 
 def send_contact_email(fields):
-    msg = MIMEMultipart()
-    msg["From"]     = SENDER_EMAIL
-    msg["To"]       = RECEIVER_EMAIL
-    msg["Reply-To"] = fields.get("email", "")
-    msg["Subject"]  = f"New Contact Message: {fields.get('full_name','N/A')}"
+    subject = f"New Contact Message: {fields.get('full_name','N/A')}"
 
     body = f"""
 <h2 style="color:#06A3DA;">New Contact Message — CoreVanta</h2>
@@ -103,12 +119,7 @@ def send_contact_email(fields):
   <tr style="background:#f5f5f5;"><td style="padding:8px;font-weight:bold;vertical-align:top;">Message</td><td style="padding:8px;">{fields.get('message','').replace(chr(10),'<br>')}</td></tr>
 </table>
 """
-    msg.attach(MIMEText(body, "html"))
-
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.starttls()
-        server.login(SENDER_EMAIL, SENDER_PASS.replace(" ", ""))
-        server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
+    send_via_resend(subject, body, reply_to=fields.get("email") or None)
 
 
 class CoreVantaHandler(SimpleHTTPRequestHandler):

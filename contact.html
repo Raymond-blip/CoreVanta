@@ -119,7 +119,11 @@
                         <h4 class="mb-1">Send Us a Message</h4>
                         <p class="text-muted mb-4">All fields marked <span class="text-danger">*</span> are required.</p>
 
-                        <form action="/send-message" method="post">
+                        <form id="contactForm" name="contact" method="post" data-netlify="true" netlify-honeypot="bot-field">
+                            <input type="hidden" name="form-name" value="contact">
+                            <p class="d-none">
+                                <label>Do not fill this out if you're human: <input name="bot-field"></label>
+                            </p>
 
                             <!-- Full Name -->
                             <div class="mb-4">
@@ -249,14 +253,29 @@
     <!-- Template Javascript -->
     <script src="js/main.js"></script>
     <script>
-        // Show success or error message based on redirect param
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('status') === 'success') {
-            document.getElementById('successMsg').classList.remove('d-none');
-            document.getElementById('successMsg').scrollIntoView({ behavior: 'smooth' });
-        } else if (params.get('status') === 'error') {
-            document.getElementById('errorMsg').classList.remove('d-none');
-            document.getElementById('errorMsg').scrollIntoView({ behavior: 'smooth' });
+        // Submit to Netlify Forms and show inline feedback
+        const contactForm = document.getElementById('contactForm');
+
+        contactForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams(new FormData(contactForm)).toString()
+                });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                contactForm.reset();
+                showStatus('successMsg');
+            } catch (err) {
+                showStatus('errorMsg');
+            }
+        });
+
+        function showStatus(id) {
+            const el = document.getElementById(id);
+            el.classList.remove('d-none');
+            el.scrollIntoView({ behavior: 'smooth' });
         }
     </script>
 </body>
