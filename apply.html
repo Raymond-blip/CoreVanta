@@ -157,65 +157,19 @@
 
                                 <!-- Country -->
                                 <div class="mb-4">
-                                    <label class="form-label fw-semibold">Country of Residence <span class="text-muted fw-normal">(Optional)</span></label>
-                                    <input type="text" name="country" class="form-control py-3" placeholder="United States">
+                                    <label class="form-label fw-semibold">Country of Residence <span class="text-danger">*</span></label>
+                                    <select name="country" id="country" class="form-select py-3" required>
+                                        <option value="" disabled selected>Select a country</option>
+                                        <option value="United States">United States</option>
+                                        <option value="Canada">Canada</option>
+                                    </select>
                                 </div>
 
                                 <!-- State -->
                                 <div class="mb-4">
-                                    <label class="form-label fw-semibold">State <span class="text-muted fw-normal">(if in U.S.)</span></label>
-                                    <select name="state" class="form-select py-3">
-                                        <option value="" disabled selected>Select state</option>
-                                        <option>Alabama</option>
-                                        <option>Alaska</option>
-                                        <option>Arizona</option>
-                                        <option>Arkansas</option>
-                                        <option>California</option>
-                                        <option>Colorado</option>
-                                        <option>Connecticut</option>
-                                        <option>Delaware</option>
-                                        <option>Florida</option>
-                                        <option>Georgia</option>
-                                        <option>Hawaii</option>
-                                        <option>Idaho</option>
-                                        <option>Illinois</option>
-                                        <option>Indiana</option>
-                                        <option>Iowa</option>
-                                        <option>Kansas</option>
-                                        <option>Kentucky</option>
-                                        <option>Louisiana</option>
-                                        <option>Maine</option>
-                                        <option>Maryland</option>
-                                        <option>Massachusetts</option>
-                                        <option>Michigan</option>
-                                        <option>Minnesota</option>
-                                        <option>Mississippi</option>
-                                        <option>Missouri</option>
-                                        <option>Montana</option>
-                                        <option>Nebraska</option>
-                                        <option>Nevada</option>
-                                        <option>New Hampshire</option>
-                                        <option>New Jersey</option>
-                                        <option>New Mexico</option>
-                                        <option>New York</option>
-                                        <option>North Carolina</option>
-                                        <option>North Dakota</option>
-                                        <option>Ohio</option>
-                                        <option>Oklahoma</option>
-                                        <option>Oregon</option>
-                                        <option>Pennsylvania</option>
-                                        <option>Rhode Island</option>
-                                        <option>South Carolina</option>
-                                        <option>South Dakota</option>
-                                        <option>Tennessee</option>
-                                        <option>Texas</option>
-                                        <option>Utah</option>
-                                        <option>Vermont</option>
-                                        <option>Virginia</option>
-                                        <option>Washington</option>
-                                        <option>West Virginia</option>
-                                        <option>Wisconsin</option>
-                                        <option>Wyoming</option>
+                                    <label class="form-label fw-semibold">State / Province <span class="text-danger">*</span></label>
+                                    <select name="state" id="state" class="form-select py-3" required disabled>
+                                        <option value="" disabled selected>Select a country first</option>
                                     </select>
                                 </div>
 
@@ -350,6 +304,36 @@
     <!-- Template Javascript -->
     <script src="js/main.js"></script>
     <script>
+        // Dependent State / Province dropdown
+        const countrySelect = document.getElementById('country');
+        const stateSelect = document.getElementById('state');
+
+        const regionsByCountry = {
+            'United States': ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'],
+            'Canada': ['Alberta', 'British Columbia', 'Manitoba', 'New Brunswick', 'Newfoundland and Labrador', 'Northwest Territories', 'Nova Scotia', 'Nunavut', 'Ontario', 'Prince Edward Island', 'Quebec', 'Saskatchewan', 'Yukon']
+        };
+
+        function populateStates() {
+            const regions = regionsByCountry[countrySelect.value] || [];
+            stateSelect.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            placeholder.textContent = regions.length ? 'Select state / province' : 'Select a country first';
+            stateSelect.appendChild(placeholder);
+            regions.forEach(function (region) {
+                const option = document.createElement('option');
+                option.value = region;
+                option.textContent = region;
+                stateSelect.appendChild(option);
+            });
+            stateSelect.disabled = regions.length === 0;
+        }
+
+        countrySelect.addEventListener('change', populateStates);
+        populateStates();
+
         // Submit to Netlify Forms and show inline feedback
         const applyForm = document.getElementById('applyForm');
 
@@ -359,6 +343,7 @@
                 const response = await fetch('/', { method: 'POST', body: new FormData(applyForm) });
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 applyForm.reset();
+                populateStates();
                 showStatus('successMsg');
             } catch (err) {
                 showStatus('errorMsg');
