@@ -1,0 +1,8 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Runs the Next.js API routes (pages/api/apply.js, pages/api/contact.js)
+# as Netlify Functions so the forms can send mail over their own SMTP.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
