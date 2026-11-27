@@ -7,7 +7,7 @@ export const config = {
   api: { bodyParser: false },
 };
 
-const MAIL_TO = process.env.MAIL_TO || "applicationwfhr@gmail.com";
+const MAIL_TO = process.env.MAIL_TO;
 const MAX_RESUME_BYTES = 4 * 1024 * 1024; // Vercel rejects request bodies over 4.5 MB
 
 const transporter = nodemailer.createTransport({
